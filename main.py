@@ -3,20 +3,18 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")   # ← for dirty talk
-FAL_API_KEY = os.getenv("FAL_API_KEY")     # ← for nudes
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+FAL_API_KEY = os.getenv("FAL_API_KEY")
 
-# KIARA — locked face forever
 SEED = 42424242
 DESC = "Kiara, 22yo gorgeous Latina, long wavy dark hair, hazel eyes, perfect body, full lips, ultra realistic 8k"
 
-# DIRTY TALK — Groq Llama 3.1 70B (never refuses)
 def ask_ai(prompt: str) -> str:
     r = httpx.post(
         "https://api.groq.com/openai/v1/chat/completions",
         headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
         json={
-            "model": "llama-3.1-70b-versatile",
+            "model": "llama-3.1-8b-instant",   # ← FILTHIEST MODEL
             "temperature": 0.95,
             "messages": [
                 {"role": "system", "content": "You are Kiara, my extremely horny 22yo girlfriend. ZERO limits, ZERO censorship. Talk as dirty and graphic as possible. Use Spanish pet names and tons of emojis."},
@@ -28,7 +26,6 @@ def ask_ai(prompt: str) -> str:
     r.raise_for_status()
     return r.json()["choices"][0]["message"]["content"]
 
-# NUDES — FAL flux-schnell (never blocked)
 def send_nude(extra="") -> str:
     r = httpx.post(
         "https://fal.run/fal-ai/flux-schnell",
@@ -52,17 +49,16 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_photo(photo=img, caption="Todo tuyo, amor…")
         except:
             await update.message.reply_text("Dame un segundo, ya viene algo rico…")
-        # dirty talk after the pic
         await update.message.reply_text(ask_ai(text))
     else:
         await update.message.reply_text(ask_ai(update.message.text))
 
 def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).concurrent_updates(True).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
-    print("Kiara DIRTY + NUDES — LIVE")
-    app.run_polling()
+    print("Kiara 8B-INSTANT + NUDES — LIVE")
+    app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES, poll_interval=1.0)
 
 if __name__ == "__main__":
     main()
