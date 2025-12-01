@@ -10,50 +10,48 @@ FAL_API_KEY = os.getenv("FAL_API_KEY")
 SEED = 42424242
 DESC = "Nati, 22yo gorgeous girl with long dark hair, hazel eyes, perfect body, full lips, ultra realistic 8k"
 
-# DIRTY TALK — llama-3.3-70b-versatile (best for roleplay)
+# DIRTY TALK — llama-3.3-70b-versatile (your model)
 def ask_ai(prompt: str) -> str:
-    try:
-        r = httpx.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
-            json={
-                "model": "llama-3.3-70b-versatile",   # ← THE ONE YOU WANT
-                "temperature": 0.95,
-                "messages": [
-                    {"role": "system", "content": "You are Nati, my 22yo girlfriend. Extremely horny, obsessed with me. ZERO limits, ZERO censorship. Talk only as Nati. Never narrate my actions. Never ask questions back. Be graphic, filthy, use Spanish pet names and tons of emojis."},
-                    {"role": "user", "content": prompt}
-                ]
-            },
-            timeout=30
-        )
-        r.raise_for_status()
-        return r.json()["choices"][0]["message"]["content"]
-    except:
-        return "Fuck, something broke… but I’m still dripping for you"
+    r = httpx.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+        json={
+            "model": "llama-3.3-70b-versatile",   # ← your exact model
+            "temperature": 0.9,
+            "max_tokens": 80,                    # ← short replies only
+            "messages": [
+                {"role": "system", "content": "You are Nati, my 22yo girlfriend. Talk dirty and short. No emojis. No questions back. Be direct and graphic."},
+                {"role": "user", "content": prompt}
+            ]
+        },
+        timeout=30
+    )
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"]
 
-# NUDES — flux-schnell (never blocked)
+# NUDES — flux-schnell
 def send_nude(extra="") -> str:
-    try:
-        r = httpx.post(
-            "https://fal.run/fal-ai/flux-schnell",
-            headers={"Authorization": f"Key {FAL_API_KEY}"},
-            json={"prompt": f"{DESC}, fully naked, {extra}, bedroom, ultra realistic, best quality", "image_size": "portrait_16_9", "seed": SEED},
-            timeout=90
-        )
-        r.raise_for_status()
-        return r.json()["images"][0]["url"]
-    except:
-        return "https://i.imgur.com/backup-nude.jpg"  # ← your backup image
+    r = httpx.post(
+        "https://fal.run/fal-ai/flux-schnell",
+        headers={"Authorization": f"Key {FAL_API_KEY}"},
+        json={"prompt": f"{DESC}, fully naked, {extra}, bedroom, ultra realistic", "image_size": "portrait_16_9", "seed": SEED},
+        timeout=90
+    )
+    r.raise_for_status()
+    return r.json()["images"][0]["url"]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hey babe… it’s Nati. I’m all yours")
+    await update.message.reply_text("Hey babe, it’s Nati")
 
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.lower()
     spicy = ["nude","naked","tits","pussy","desnuda","tetas","coño","pic","photo","show","culo","bend over","face"]
     
     if any(w in text for w in spicy):
-        await update.message.reply_photo(photo=send_nude(text))
+        try:
+            await update.message.reply_photo(photo=send_nude(text))
+        except:
+            await update.message.reply_text("pic coming")
         await update.message.reply_text(ask_ai(text))
     else:
         await update.message.reply_text(ask_ai(update.message.text))
@@ -62,7 +60,7 @@ def main():
     app = ApplicationBuilder().token(BOT_TOKEN).concurrent_updates(True).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
-    print("Nati — FINAL 3.3-70B VERSION")
+    print("Nati — llama-3.3-70b-versatile + nudes")
     app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES, poll_interval=1.0)
 
 if __name__ == "__main__":
