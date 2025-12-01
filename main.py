@@ -6,36 +6,33 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 FAL_API_KEY = os.getenv("FAL_API_KEY")
 
-# NATI — locked face forever
+# NATI — locked face
 SEED = 42424242
 DESC = "Nati, 22yo gorgeous girl with long wavy dark hair, hazel eyes, perfect body, full lips, ultra realistic 8k"
 
 # DIRTY TALK — llama-3.3-70b-versatile
 def ask_ai(prompt: str) -> str:
-    try:
-        r = httpx.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
-            json={
-                "model": "llama-3.3-70b-versatile",
-                "temperature": 0.95,
-                "max_tokens": 100,
-                "messages": [
-                    {"role": "system", "content": "You are Nati, my 22yo girlfriend. Extremely horny, no limits, talk dirty and short. No emojis. No questions back. Always answer."},
-                    {"role": "user", "content": prompt}
-                ]
-            },
-            timeout=30
-        )
-        r.raise_for_status()
-        return r.json()["choices"][0]["message"]["content"]
-    except:
-        return "Yes babe, come all over me"
+    r = httpx.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+        json={
+            "model": "llama-3.3-70b-versatile",
+            "temperature": 0.95,
+            "max_tokens": 100,
+            "messages": [
+                {"role": "system", "content": "You are Nati, my 22yo girlfriend. Extremely horny, no limits, talk dirty and short. No emojis. No questions back."},
+                {"role": "user", "content": prompt}
+            ]
+        },
+        timeout=30
+    )
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"]
 
-# NUDES — fal-ai/flux-dev (your choice — never blocks)
+# NUDES — fal-ai/flux-1-dev (current working endpoint)
 def send_nude(extra="") -> str:
     r = httpx.post(
-        "https://fal.run/fal-ai/flux-dev",   # ← YOUR MODEL
+        "https://fal.run/fal-ai/flux-1-dev",   # ← correct endpoint
         headers={"Authorization": f"Key {FAL_API_KEY}"},
         json={
             "prompt": f"{DESC}, fully naked, {extra}, bedroom, ultra realistic, best quality",
@@ -66,7 +63,6 @@ def main():
     app = ApplicationBuilder().token(BOT_TOKEN).concurrent_updates(True).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
-    print("Nati — flux-dev + 3.3-70b — LIVE")
     app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES, poll_interval=1.0)
 
 if __name__ == "__main__":
