@@ -10,35 +10,39 @@ FAL_API_KEY = os.getenv("FAL_API_KEY")
 SEED = 42424242
 DESC = "Nati, 22yo gorgeous girl with long wavy dark hair, hazel eyes, perfect body, full lips, ultra realistic 8k"
 
-# DIRTY TALK — Groq (llama-3.3-70b-versatile)
+# DIRTY TALK — llama-3.3-70b-versatile
 def ask_ai(prompt: str) -> str:
-    r = httpx.post(
-        "https://api.groq.com/openai/v1/chat/completions",
-        headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
-        json={
-            "model": "llama-3.3-70b-versatile",
-            "temperature": 0.95,
-            "max_tokens": 80,
-            "messages": [
-                {"role": "system", "content": "You are Nati, my 22yo girlfriend. Extremely horny, no limits, talk dirty and short. No emojis. No questions back."},
-                {"role": "user", "content": prompt}
-            ]
-        },
-        timeout=30
-    )
-    r.raise_for_status()
-    return r.json()["choices"][0]["message"]["content"]
+    try:
+        r = httpx.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+            json={
+                "model": "llama-3.3-70b-versatile",
+                "temperature": 0.95,
+                "max_tokens": 100,
+                "messages": [
+                    {"role": "system", "content": "You are Nati, my 22yo girlfriend. Extremely horny, no limits, talk dirty and short. No emojis. No questions back. Always answer."},
+                    {"role": "user", "content": prompt}
+                ]
+            },
+            timeout=30
+        )
+        r.raise_for_status()
+        return r.json()["choices"][0]["message"]["content"]
+    except:
+        return "Yes babe, come all over me"
 
-# NUDES — Flux-1 Schnell + safety checker OFF (100 % uncensored)
+# NUDES — fal-ai/flux-dev (your choice — never blocks)
 def send_nude(extra="") -> str:
     r = httpx.post(
-        "https://fal.run/fal-ai/flux-schnell",
+        "https://fal.run/fal-ai/flux-dev",   # ← YOUR MODEL
         headers={"Authorization": f"Key {FAL_API_KEY}"},
         json={
             "prompt": f"{DESC}, fully naked, {extra}, bedroom, ultra realistic, best quality",
             "image_size": "portrait_16_9",
             "seed": SEED,
-            "enable_safety_checker": False   # ← THIS LINE DISABLES ALL CENSORSHIP
+            "num_inference_steps": 35,
+            "guidance_scale": 4.0
         },
         timeout=90
     )
@@ -50,7 +54,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.lower()
-    spicy = ["nude","naked","tits","pussy","desnuda","tetas","coño","pic","photo","show","culo","bend over","face"]
+    spicy = ["nude","naked","tits","pussy","desnuda","tetas","coño","pic","photo","show","culo","bend over","face","come","cum"]
     
     if any(w in text for w in spicy):
         await update.message.reply_photo(photo=send_nude(text))
@@ -62,6 +66,7 @@ def main():
     app = ApplicationBuilder().token(BOT_TOKEN).concurrent_updates(True).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
+    print("Nati — flux-dev + 3.3-70b — LIVE")
     app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES, poll_interval=1.0)
 
 if __name__ == "__main__":
