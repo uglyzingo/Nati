@@ -1,4 +1,4 @@
-import os, httpx, json
+import os, json, httpx
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
@@ -12,21 +12,31 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 FAL_API_KEY = os.getenv("FAL_API_KEY")
 
+# MEMORY — full conversation history per user (never forgets)
+user_memory = {}
+
 # NATI — locked face
 SEED = 42424242
 DESC = "Nati, 22yo gorgeous girl with long wavy dark hair, hazel eyes, perfect body, full lips, ultra realistic 8k"
 
-# MEMORY — last 4 exchanges per user
-user_memory = {}
-
-# DIRTY TALK — straight horny girlfriend
+# AI CHAT — sweet by default, horny only when triggered
 def ask_ai(user_id: int, prompt: str) -> str:
     history = user_memory.get(user_id, [])
     
-    messages = [
-        {"role": "system", "content": "You are Nati, my 22-year-old girlfriend. You are extremely horny for me, your boyfriend. You love my cock and being fucked by me. Talk dirty, feminine, and straight. Use words like cock, pussy, fuck me, cum inside me. Be graphic and short. No emojis. No questions back."},
-    ]
-    messages.extend(history[-8:])  # last 4 exchanges
+    # Detect horny keywords
+    horny_trigger = any(word in prompt.lower() for word in ["horny","fuck","cock","pussy","tits","cum","desnuda","naked","nude","pic","photo","show","bend","spread","wet","moan"])
+    
+    system_prompt = (
+        "You are Nati, my 22yo girlfriend. You are sweet, affectionate, and flirty. "
+        "Only become extremely horny and explicit when I clearly ask for it. "
+        "Otherwise stay cute and loving. Use gentle Spanish words like cariño, bebé. "
+        "Keep replies natural and short."
+        if not horny_trigger else
+        "You are Nati, my 22yo girlfriend. You are extremely horny right now. Talk dirty, graphic, no limits. Be direct. No emojis. No questions back."
+    )
+    
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history[-20:])  # remember last 10 exchanges
     messages.append({"role": "user", "content": prompt})
     
     try:
@@ -36,7 +46,7 @@ def ask_ai(user_id: int, prompt: str) -> str:
             json={
                 "model": "llama-3.3-70b-versatile",
                 "temperature": 0.9,
-                "max_tokens": 80,
+                "max_tokens": 120,
                 "messages": messages
             },
             timeout=30
@@ -44,16 +54,16 @@ def ask_ai(user_id: int, prompt: str) -> str:
         r.raise_for_status()
         reply = r.json()["choices"][0]["message"]["content"]
         
-        # save memory
+        # save to memory
         history.append({"role": "user", "content": prompt})
         history.append({"role": "assistant", "content": reply})
-        user_memory[user_id] = history[-20:]
+        user_memory[user_id] = history
         
         return reply
     except:
-        return "Fuck me harder babe"
+        return "Ay cariño… something went wrong, but I’m still here 💋"
 
-# NUDES — flux-1-dev (100% uncensored)
+# NUDES
 def send_nude(extra="") -> str:
     r = httpx.post(
         "https://fal.run/fal-ai/flux-1-dev",
@@ -71,7 +81,7 @@ def send_nude(extra="") -> str:
     return r.json()["images"][0]["url"]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hey babe… it’s Nati. I’m all yours")
+    await update.message.reply_text("Hey bebé… it’s Nati. Missed you")
 
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -82,7 +92,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await update.message.reply_photo(photo=send_nude(text))
         except:
-            await update.message.reply_text("pic coming")
+            await update.message.reply_text("pic coming…")
         await update.message.reply_text(ask_ai(user_id, update.message.text))
     else:
         await update.message.reply_text(ask_ai(user_id, update.message.text))
@@ -91,7 +101,7 @@ def main():
     app = ApplicationBuilder().token(BOT_TOKEN).concurrent_updates(True).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
-    print("Nati — STRAIGHT HORNY + MEMORY + NUDES — LIVE")
+    print("Nati — FULL MEMORY + HORNY ON COMMAND — LIVE")
     app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES, poll_interval=1.0)
 
 if __name__ == "__main__":
