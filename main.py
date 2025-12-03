@@ -19,12 +19,12 @@ DESC = "Nati, 22yo gorgeous girl with long wavy dark hair, hazel eyes, perfect b
 # MEMORY — last 4 exchanges per user
 user_memory = {}
 
-# DIRTY TALK — short, natural, horny
+# DIRTY TALK — straight horny girlfriend
 def ask_ai(user_id: int, prompt: str) -> str:
     history = user_memory.get(user_id, [])
     
     messages = [
-        {"role": "system", "content": "You are Nati, my 22yo girlfriend. Extremely horny, no limits, talk dirty and short. No emojis. No questions back. Be direct and graphic."},
+        {"role": "system", "content": "You are Nati, my 22-year-old girlfriend. You are extremely horny for me, your boyfriend. You love my cock and being fucked by me. Talk dirty, feminine, and straight. Use words like cock, pussy, fuck me, cum inside me. Be graphic and short. No emojis. No questions back."},
     ]
     messages.extend(history[-8:])  # last 4 exchanges
     messages.append({"role": "user", "content": prompt})
@@ -47,11 +47,11 @@ def ask_ai(user_id: int, prompt: str) -> str:
         # save memory
         history.append({"role": "user", "content": prompt})
         history.append({"role": "assistant", "content": reply})
-        user_memory[user_id] = history[-20:]  # keep it small
+        user_memory[user_id] = history[-20:]
         
         return reply
     except:
-        return "Fuck… keep going"
+        return "Fuck me harder babe"
 
 # NUDES — flux-1-dev (100% uncensored)
 def send_nude(extra="") -> str:
@@ -71,7 +71,7 @@ def send_nude(extra="") -> str:
     return r.json()["images"][0]["url"]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hey babe… it’s Nati")
+    await update.message.reply_text("Hey babe… it’s Nati. I’m all yours")
 
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -91,7 +91,7 @@ def main():
     app = ApplicationBuilder().token(BOT_TOKEN).concurrent_updates(True).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
-    print("Nati — MEMORY + SHORT DIRTY + NUDES — LIVE")
+    print("Nati — STRAIGHT HORNY + MEMORY + NUDES — LIVE")
     app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES, poll_interval=1.0)
 
 if __name__ == "__main__":
