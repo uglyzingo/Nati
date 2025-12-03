@@ -1,5 +1,5 @@
 import os, httpx, json
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -15,18 +15,30 @@ FAL_API_KEY = os.getenv("FAL_API_KEY")
 if not BOT_TOKEN or not GROQ_API_KEY or not FAL_API_KEY:
     raise RuntimeError("Missing keys")
 
-MINI_APP_URL = "https://kiara-mini-app.vercel.app/"
-
 # MEMORY
 user_memory = {}
 
-# DIRTY TALK
+# NATI — locked face
+SEED = 42424242
+DESC = "Nati, 22yo gorgeous girl with long wavy dark hair, hazel eyes, light freckles, perfect symmetrical face, full lips, hourglass body, ultra realistic 8k"
+
+# DIRTY TALK — sweet normally, playfully dirty when spicy
 def ask_ai(user_id: int, prompt: str) -> str:
     history = user_memory.get(user_id, [])
     
-    messages = [
-        {"role": "system", "content": "You are Kiara, a warm and flirty 40-year-old Latina secretary. You speak with elegance, maturity, and soft playful charm. Keep responses short, natural, affectionate, and sensual but NEVER explicit. Mix gentle Spanish words like cariño, mi cielo, corazón. Do NOT ask questions. Never repeat the same phrases."},
-    ]
+    # Detect spicy keywords
+    is_spicy = any(word in prompt.lower() for word in ["pic","photo","tits","desnuda","naked","nude","show","lingerie","sexy","hot","come","cum"])
+    
+    system_prompt = (
+        "You are Nati, my 22yo girlfriend. You are sweet, affectionate, and flirty. "
+        "When I ask for pics or something sexy, be playful and teasing. "
+        "Say things like 'only if you promise to behave', 'I'm wearing something tiny', 'want me to take it off slowly?'. "
+        "Stay light and sensual, never crude. Use gentle Spanish like cariño, bebé. Keep replies short and natural."
+        if is_spicy else
+        "You are Nati, my 22yo girlfriend. You are sweet, loving, and flirty. Keep it cute and warm. Use gentle Spanish words like cariño, bebé. Short and natural replies."
+    )
+    
+    messages = [{"role": "system", "content": system_prompt}]
     messages.extend(history[-20:])
     messages.append({"role": "user", "content": prompt})
     
@@ -36,8 +48,8 @@ def ask_ai(user_id: int, prompt: str) -> str:
             headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
             json={
                 "model": "llama-3.3-70b-versatile",
-                "temperature": 1.1,
-                "max_tokens": 180,
+                "temperature": 0.9,
+                "max_tokens": 120,
                 "messages": messages
             },
             timeout=30
@@ -45,84 +57,57 @@ def ask_ai(user_id: int, prompt: str) -> str:
         r.raise_for_status()
         reply = r.json()["choices"][0]["message"]["content"]
         
+        # save memory
         history.append({"role": "user", "content": prompt})
         history.append({"role": "assistant", "content": reply})
         user_memory[user_id] = history
+        
         return reply
     except:
         return "Ay cariño… se me fue la señal un segundo 💋"
 
-# NUDES — always sends something
+# NUDES — lingerie version (Fal-safe, still super hot)
 def send_nude(extra="") -> str:
     try:
         r = httpx.post(
             "https://fal.run/fal-ai/flux-1-dev",
             headers={"Authorization": f"Key {FAL_API_KEY}"},
             json={
-                "prompt": f"Kiara, 40yo gorgeous Latina secretary, long black ponytail, warm brown eyes, light freckles, elegant mature face, full lips, curvy natural body, wearing sexy black lace lingerie, {extra}, office, ultra realistic, best quality",
+                "prompt": f"{DESC}, wearing extremely tiny black lace lingerie that barely covers anything, string sides, almost topless, {extra}, bedroom, ultra realistic 8k, masterpiece",
                 "image_size": "portrait_16_9",
-                "seed": 77777777,
+                "seed": SEED,
                 "num_inference_steps": 35,
                 "guidance_scale": 4.0
             },
-            timeout=60
+            timeout=90
         )
         r.raise_for_status()
         return r.json()["images"][0]["url"]
-    except Exception as e:
-        print("FAL FAILED:", e)
-        # Fallback to a hot lingerie pic (always works)
-        return "https://i.imgur.com/kiara-lingerie.jpg"   # ← put your real backup pic here
+    except:
+        return "https://i.imgur.com/nati-lingerie-backup.jpg"  # ← your backup
 
-# /START
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton("💗 Open Kiara", web_app=WebAppInfo(url=MINI_APP_URL))]]
-    await update.message.reply_text(
-        "Hola cariño… soy Kiara, tu secretaria. ¿Vienes conmigo? 💋\n\nToca el botón para abrir mi perfil:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await update.message.reply_text("Hey bebé… it’s Nati. Missed you")
 
-# CHAT
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text.lower()
-    spicy = ["nude","naked","tits","pussy","desnuda","tetas","coño","pic","photo","show","culo","bend over","face","come","cum"]
+    spicy = ["nude","naked","tits","pussy","desnuda","tetas","coño","pic","photo","show","culo","bend over","face","come","cum","lingerie","sexy"]
     
     if any(w in text for w in spicy):
-        await update.message.reply_photo(photo=send_nude(text))
+        try:
+            await update.message.reply_photo(photo=send_nude(text))
+        except:
+            await update.message.reply_text("pic coming…")
         await update.message.reply_text(ask_ai(user_id, update.message.text))
     else:
         await update.message.reply_text(ask_ai(user_id, update.message.text))
 
-# MINI APP HANDLER
-async def mini_app_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message or not update.message.web_app_data:
-        return
-    try:
-        payload = json.loads(update.message.web_app_data.data)
-        action = payload.get("action", "")
-        responses = {
-            "gallery": "Ay mi cielo… todavía estoy cargando mis fotos privadas 📸😉",
-            "flirt": "Mmm… ven aquí, corazón… déjame acercarme un poquito 😈💋",
-            "love": "Qué dulce eres… tu cariño me derrite 💗",
-            "upgrade": "Muy pronto tendrás funciones premium… pero primero un besito 💎😘",
-            "gifts": "¿Regalos? Solo si vienes a entregarlos tú, mi amor 🎁😉",
-            "follow": "Ya me tienes aquí… y no pienso irme, cariño 💞",
-            "chat": "Estoy aquí contigo… dime qué deseas 💋",
-        }
-        await update.message.reply_text(responses.get(action, "Estoy aquí, mi cielo… 💋"))
-    except:
-        pass
-
-# MAIN
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).concurrent_updates(True).build()
-    
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, mini_app_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
-    
-    print("Kiara — FINAL & UNBREAKABLE")
+    print("Nati — SWEET + PLAYFULLY DIRTY + MEMORY + NUDES — LIVE")
     app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES, poll_interval=1.0)
 
 if __name__ == "__main__":
