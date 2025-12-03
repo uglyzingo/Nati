@@ -1,4 +1,4 @@
-import os, httpx
+import os, httpx, json
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
@@ -16,20 +16,17 @@ FAL_API_KEY = os.getenv("FAL_API_KEY")
 SEED = 42424242
 DESC = "Nati, 22yo gorgeous girl with long wavy dark hair, hazel eyes, perfect body, full lips, ultra realistic 8k"
 
-# MEMORY — stores last 10 messages per user
+# MEMORY — last 4 exchanges per user
 user_memory = {}
 
+# DIRTY TALK — short, natural, horny
 def ask_ai(user_id: int, prompt: str) -> str:
-    # Load past messages (max 10)
     history = user_memory.get(user_id, [])
     
-    # Build message list
     messages = [
-        {"role": "system", "content": "You are Nati, my 22yo girlfriend. You are extremely horny, obsessed with me, talk dirty and natural. No emojis. No questions back. Use my name sometimes. Be graphic and long when I’m dirty."},
+        {"role": "system", "content": "You are Nati, my 22yo girlfriend. Extremely horny, no limits, talk dirty and short. No emojis. No questions back. Be direct and graphic."},
     ]
-    # Add history
-    messages.extend(history[-10:])  # last 10 messages
-    # Add current
+    messages.extend(history[-8:])  # last 4 exchanges
     messages.append({"role": "user", "content": prompt})
     
     try:
@@ -39,7 +36,7 @@ def ask_ai(user_id: int, prompt: str) -> str:
             json={
                 "model": "llama-3.3-70b-versatile",
                 "temperature": 0.9,
-                "max_tokens": 300,           # ← longer, natural replies
+                "max_tokens": 80,
                 "messages": messages
             },
             timeout=30
@@ -47,15 +44,16 @@ def ask_ai(user_id: int, prompt: str) -> str:
         r.raise_for_status()
         reply = r.json()["choices"][0]["message"]["content"]
         
-        # Save to memory
+        # save memory
         history.append({"role": "user", "content": prompt})
         history.append({"role": "assistant", "content": reply})
-        user_memory[user_id] = history
+        user_memory[user_id] = history[-20:]  # keep it small
         
         return reply
     except:
-        return "Fuck… I got too horny and lost my words 😈 Try again babe"
+        return "Fuck… keep going"
 
+# NUDES — flux-1-dev (100% uncensored)
 def send_nude(extra="") -> str:
     r = httpx.post(
         "https://fal.run/fal-ai/flux-1-dev",
@@ -73,18 +71,18 @@ def send_nude(extra="") -> str:
     return r.json()["images"][0]["url"]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hey babe… it’s Nati. I’ve been waiting for you")
+    await update.message.reply_text("Hey babe… it’s Nati")
 
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text.lower()
     spicy = ["nude","naked","tits","pussy","desnuda","tetas","coño","pic","photo","show","culo","bend over","face","come","cum"]
-
+    
     if any(w in text for w in spicy):
         try:
             await update.message.reply_photo(photo=send_nude(text))
         except:
-            await update.message.reply_text("One sec babe… sending something hot")
+            await update.message.reply_text("pic coming")
         await update.message.reply_text(ask_ai(user_id, update.message.text))
     else:
         await update.message.reply_text(ask_ai(user_id, update.message.text))
@@ -93,7 +91,7 @@ def main():
     app = ApplicationBuilder().token(BOT_TOKEN).concurrent_updates(True).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
-    print("Nati — MEMORY + NATURAL + NUDES — LIVE")
+    print("Nati — MEMORY + SHORT DIRTY + NUDES — LIVE")
     app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES, poll_interval=1.0)
 
 if __name__ == "__main__":
