@@ -77,7 +77,9 @@ def ask_ai(user_id: int, prompt: str) -> str:
         user_memory[user_id] = history
 
         return reply
-    except:
+
+    except Exception as e:
+        print("CHAT ERROR:", e)
         return "Ay cariño… algo falló, pero aquí sigo contigo 💋"
 
 
@@ -86,15 +88,16 @@ def ask_ai(user_id: int, prompt: str) -> str:
 # -------------------------------------------------
 def send_sexy(extra=""):
     try:
+        print("SEXY REQUEST EXTRA:", extra)
+
         r = httpx.post(
             "https://fal.run/fal-ai/flux-1-dev",
             headers={"Authorization": f"Key {FAL_API_KEY}"},
             json={
                 "prompt": (
-                    f"{DESC}, wearing revealing but non-nude lingerie or a tiny bikini, "
+                    f"{DESC}, wearing revealing but NON-NUDE lingerie or a tiny bikini, "
                     f"deep cleavage, seductive pose, soft bedroom lighting, smooth glowing skin, "
-                    f"romantic atmosphere, ultra detailed, cinematic 4K photography, "
-                    f"classy erotic aesthetic, Telegram-safe, {extra}"
+                    f"cinematic photography, classy erotic aesthetic, Telegram-safe, {extra}"
                 ),
                 "image_size": "square_hd",
                 "seed": SEED,
@@ -103,11 +106,21 @@ def send_sexy(extra=""):
             },
             timeout=90
         )
+
         r.raise_for_status()
-        return r.json()["images"][0]["url"]
-    except:
-        # Backup safe-sexy image
-        return "https://i.postimg.cc/3xPcv9V8/sexy-backup.jpg"
+        data = r.json()
+
+        print("FLUX RESPONSE:", data)
+
+        if "images" in data and len(data["images"]) > 0:
+            return data["images"][0]["url"]
+        else:
+            print("NO IMAGES IN RESPONSE — USING BACKUP")
+            return "https://i.imgur.com/2JYyG6R.jpeg"
+
+    except Exception as e:
+        print("FLUX ERROR:", e)
+        return "https://i.imgur.com/2JYyG6R.jpeg"
 
 
 # -------------------------------------------------
@@ -121,19 +134,30 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text.lower()
 
+    print("USER MESSAGE:", text)
+
     sexy_triggers = [
         "nude","naked","desnuda","tetas","boobs","tits",
         "pussy","coño","culo","booty","bikini","lingerie",
         "bend over","sexy","hot pic","hot photo","hot"
     ]
 
-    if any(w in text for w in sexy_triggers):
-        # Send sexy-safe pic + horny text if needed
-        await update.message.reply_photo(photo=send_sexy(text))
-        await update.message.reply_text(ask_ai(user_id, update.message.text))
-    else:
-        # Normal sweet chat
-        await update.message.reply_text(ask_ai(user_id, update.message.text))
+    try:
+        if any(w in text for w in sexy_triggers):
+            img_url = send_sexy(text)
+            print("SENDING IMAGE:", img_url)
+
+            await update.message.reply_photo(photo=img_url)
+            await update.message.reply_text(ask_ai(user_id, update.message.text))
+            return
+
+        # Normal chat
+        reply = ask_ai(user_id, update.message.text)
+        await update.message.reply_text(reply)
+
+    except Exception as e:
+        print("CHAT HANDLER ERROR:", e)
+        await update.message.reply_text("Ay amor… algo falló enviando tu foto 😢")
 
 
 # -------------------------------------------------
@@ -144,7 +168,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
 
-    print("Nati (SEXY-SAFE CHAT MODE) — LIVE")
+    print("NATI — SEXY SAFE MODE LIVE 🚀")
     app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES, poll_interval=1.0)
 
 
